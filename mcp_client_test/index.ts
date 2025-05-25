@@ -31,11 +31,11 @@ class MCPClient {
   
   async connectToServer(serverScriptPath: string) {
     try {
-      const isJs = serverScriptPath.endsWith(".js");
+      const isTs = serverScriptPath.endsWith(".ts");
       const isPy = serverScriptPath.endsWith(".py");
 
-      if (!isJs && !isPy) {
-        throw new Error("Server script must be a .js or .py file");
+      if (!isTs && !isPy) {
+        throw new Error("Server script must be a .ts or .py file");
       }
       const command = isPy
         ? process.platform === "win32"
@@ -120,4 +120,48 @@ class MCPClient {
   
     return finalText.join("\n");
   }
+
+  async chatLoop() {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+  
+    try {
+      console.log("\nMCP Client Started!");
+      console.log("Type your queries or 'quit' to exit.");
+  
+      while (true) {
+        const message = await rl.question("\nQuery: ");
+        if (message.toLowerCase() === "quit") {
+          break;
+        }
+        const response = await this.processQuery(message);
+        console.log("\n" + response);
+      }
+    } finally {
+      rl.close();
+    }
+  }
+  
+  async cleanup() {
+    await this.mcp.close();
+  }
 }
+
+async function main() {
+    if (process.argv.length < 3) {
+      console.log("Usage: node index.ts <path_to_server_script>");
+      return;
+    }
+    const mcpClient = new MCPClient();
+    try {
+      await mcpClient.connectToServer(process.argv[2]);
+      await mcpClient.chatLoop();
+    } finally {
+      await mcpClient.cleanup();
+      process.exit(0);
+    }
+  }
+  
+  main();
