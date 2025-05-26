@@ -4,7 +4,7 @@ import {
   Tool,
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import readline from "readline/promises";
 import dotenv from "dotenv";
 
@@ -18,7 +18,7 @@ if (!ANTHROPIC_API_KEY) {
 class MCPClient {
   private mcp: Client;
   private anthropic: Anthropic;
-  private transport: StreamableHTTPClientTransport | null = null;
+  private transport: StdioClientTransport | null = null;
   private tools: Tool[] = [];
 
   constructor() {
@@ -32,7 +32,6 @@ class MCPClient {
     try {
       const isTs = serverScriptPath.endsWith(".ts");
       const isPy = serverScriptPath.endsWith(".py");
-
       if (!isTs && !isPy) {
         throw new Error("Server script must be a .ts or .py file");
       }
@@ -42,9 +41,10 @@ class MCPClient {
           : "python3"
         : process.execPath;
   
-      this.transport = new StreamableHTTPClientTransport(
-        new URL(`http://localhost:3000/mcp/${serverScriptPath}`)
-      );
+      this.transport = new StdioClientTransport({
+        command,
+        args: [serverScriptPath],
+      });
       this.mcp.connect(this.transport);
   
       const toolsResult = await this.mcp.listTools();
